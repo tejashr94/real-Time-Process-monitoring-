@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ProcWatch - Process Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- PERMISSION SCREEN -->
+<div id="permission-screen">
+  <div class="perm-box">
+    <div class="perm-logo">PROCWATCH</div>
+    <div class="perm-subtitle">Real-Time System Monitor</div>
+    <div class="perm-icon">🔐</div>
+    <h2 class="perm-title">Device Access Request</h2>
+    <p class="perm-desc">ProcWatch needs to read your device hardware info to show live system stats. The following data will be accessed:</p>
+    <div class="perm-list">
+      <div class="perm-item"><span class="perm-check">✓</span><span>CPU core count and architecture</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>Device RAM size</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>Battery percentage and charging status</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>Network type and speed</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>Screen resolution and pixel density</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>OS and browser info</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>JS Heap memory usage</span></div>
+      <div class="perm-item"><span class="perm-check">✓</span><span>Live FPS and CPU load</span></div>
+      <div class="perm-item perm-no"><span class="perm-cross">✗</span><span>No files, camera, mic or location data</span></div>
+      <div class="perm-item perm-no"><span class="perm-cross">✗</span><span>Nothing sent to any server - 100% local</span></div>
+    </div>
+    <button class="perm-allow-btn" id="perm-allow-btn">Allow and Launch</button>
+    <div class="perm-note">All data stays on your device. No tracking.</div>
+  </div>
+</div>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen" style="display:none">
+  <div class="boot-content">
+    <div class="boot-logo">PROCWATCH</div>
+    <div class="boot-subtitle">Loading system information...</div>
+    <div class="boot-bar-wrap"><div class="boot-bar" id="boot-bar"></div></div>
+    <div class="boot-log" id="boot-log"></div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="app" style="display:none">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-title">ProcWatch <span class="logo-version">v3.0</span></div>
+      <div class="logo-sub">Real-Time Process Monitor</div>
+    </div>
+    <div class="topbar-center">
+      <div class="sys-stat"><span class="stat-lbl">UPTIME</span><span class="stat-val" id="uptime-val">00:00:00</span></div>
+      <div class="sys-stat"><span class="stat-lbl">PLATFORM</span><span class="stat-val" id="top-platform">--</span></div>
+      <div class="sys-stat"><span class="stat-lbl">CPU CORES</span><span class="stat-val" id="top-cores">--</span></div>
+      <div class="sys-stat"><span class="stat-lbl">DEVICE RAM</span><span class="stat-val" id="top-ram">--</span></div>
+      <div class="sys-stat"><span class="stat-lbl">BROWSER</span><span class="stat-val" id="top-browser">--</span></div>
+      <div class="sys-stat"><span class="stat-lbl">NETWORK</span><span class="stat-val" id="top-net">--</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-display" id="clock-display">--:--:--</div>
+      <div class="real-badge">● Live Data</div>
+    </div>
+  </header>
+
+  <!-- RESOURCE CARDS -->
+  <section class="resource-row">
+
+    <div class="res-card">
+      <div class="res-label">CPU LOAD</div>
+      <div class="res-ring-wrap">
+        <svg class="res-ring" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" class="ring-bg"/>
+          <circle cx="40" cy="40" r="32" class="ring-fg ring-cpu" id="ring-cpu" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="ring-pct" id="cpu-pct">--</div>
+      </div>
+      <div class="res-detail" id="cpu-detail">Measuring...</div>
+      <div class="spark-wrap"><canvas id="cpu-spark" width="200" height="36"></canvas></div>
+      <div class="res-note">Scheduler timing method</div>
+    </div>
+
+    <div class="res-card">
+      <div class="res-label">DEVICE RAM</div>
+      <div class="res-ring-wrap">
+        <svg class="res-ring" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" class="ring-bg"/>
+          <circle cx="40" cy="40" r="32" class="ring-fg ring-mem" id="ring-mem" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="ring-pct" id="mem-pct">--</div>
+      </div>
+      <div class="res-detail"><span id="mem-used-disp">--</span> used / <span id="mem-total-disp">-- GB</span></div>
+      <div class="spark-wrap"><canvas id="mem-spark" width="200" height="36"></canvas></div>
+      <div class="res-note">navigator.deviceMemory</div>
+    </div>
+
+    <div class="res-card">
+      <div class="res-label">BATTERY</div>
+      <div class="res-ring-wrap">
+        <svg class="res-ring" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" class="ring-bg"/>
+          <circle cx="40" cy="40" r="32" class="ring-fg ring-bat" id="ring-bat" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="ring-pct" id="bat-pct">--</div>
+      </div>
+      <div class="res-detail" id="bat-detail">Requesting access...</div>
+      <div class="spark-wrap"><canvas id="bat-spark" width="200" height="36"></canvas></div>
+      <div class="res-note">Battery Status API</div>
+    </div>
+
+    <div class="res-card">
+      <div class="res-label">NETWORK</div>
+      <div class="kv-list" id="net-kv">
+        <div class="kv-row"><span class="kv-k">Type</span><span class="kv-v" id="net-type">--</span></div>
+        <div class="kv-row"><span class="kv-k">Effective</span><span class="kv-v" id="net-eff">--</span></div>
+        <div class="kv-row"><span class="kv-k">Downlink</span><span class="kv-v" id="net-dl">--</span></div>
+        <div class="kv-row"><span class="kv-k">RTT</span><span class="kv-v" id="net-rtt">--</span></div>
+        <div class="kv-row"><span class="kv-k">Online</span><span class="kv-v" id="net-online">--</span></div>
+        <div class="kv-row"><span class="kv-k">Ping</span><span class="kv-v" id="net-ping">--</span></div>
+      </div>
+      <div class="res-note">navigator.connection API</div>
+    </div>
+
+    <div class="res-card">
+      <div class="res-label">JS HEAP MEMORY</div>
+      <div class="kv-list">
+        <div class="kv-row"><span class="kv-k">Used Heap</span><span class="kv-v" id="heap-used">--</span></div>
+        <div class="kv-row"><span class="kv-k">Total Heap</span><span class="kv-v" id="heap-total">--</span></div>
+        <div class="kv-row"><span class="kv-k">Heap Limit</span><span class="kv-v" id="heap-limit">--</span></div>
+        <div class="kv-row"><span class="kv-k">Heap Use%</span><span class="kv-v" id="heap-pct">--</span></div>
+        <div class="kv-row"><span class="kv-k">FPS</span><span class="kv-v" id="fps-val">--</span></div>
+        <div class="kv-row"><span class="kv-k">Page Load</span><span class="kv-v" id="page-load">--</span></div>
+      </div>
+      <div class="res-note">performance.memory (Chrome)</div>
+    </div>
+
+    <div class="res-card">
+      <div class="res-label">DEVICE INFO</div>
+      <div class="kv-list">
+        <div class="kv-row"><span class="kv-k">OS</span><span class="kv-v" id="dev-os">--</span></div>
+        <div class="kv-row"><span class="kv-k">Screen</span><span class="kv-v" id="dev-screen">--</span></div>
+        <div class="kv-row"><span class="kv-k">DPR</span><span class="kv-v" id="dev-dpr">--</span></div>
+        <div class="kv-row"><span class="kv-k">Touchpoints</span><span class="kv-v" id="dev-touch">--</span></div>
+        <div class="kv-row"><span class="kv-k">CPU Cores</span><span class="kv-v" id="dev-cores">--</span></div>
+        <div class="kv-row"><span class="kv-k">Language</span><span class="kv-v" id="dev-lang">--</span></div>
+      </div>
+      <div class="res-note">screen + navigator APIs</div>
+    </div>
+
+  </section>
+
+  <!-- CHARTS -->
+  <section class="charts-row">
+    <div class="chart-panel wide">
+      <div class="panel-header">
+        <span class="panel-title">REAL-TIME HISTORY (last 60s)</span>
+        <div class="legend-row">
+          <span class="leg leg-cpu">● CPU Load</span>
+          <span class="leg leg-mem">● JS Heap%</span>
+          <span class="leg leg-fps">● FPS/60</span>
+        </div>
+      </div>
+      <canvas id="history-chart" height="120"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="panel-header"><span class="panel-title">PROCESS STATES</span></div>
+      <canvas id="state-donut" width="200" height="200"></canvas>
+      <div class="donut-legend" id="donut-legend"></div>
+    </div>
+    <div class="chart-panel">
+      <div class="panel-header"><span class="panel-title">TOP CPU PROCESSES</span></div>
+      <canvas id="top-cpu-chart" height="180"></canvas>
+    </div>
+  </section>
+
+  <!-- CPU CORES -->
+  <section class="cores-section">
+    <div class="panel-header" style="padding:8px 16px 6px">
+      <span class="panel-title">CPU CORES - Your device has <span id="cores-real-count" style="color:#ffd93d">--</span> logical cores</span>
+    </div>
+    <div class="cpu-cores-grid" id="cpu-cores-grid"></div>
+  </section>
+
+  <!-- PROCESS TABLE -->
+  <section class="table-section">
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <span class="panel-title">PROCESS TABLE (<span id="proc-os-label" style="color:#ffd93d">your OS</span>)</span>
+        <div class="filter-chips" id="filter-chips">
+          <button class="chip active" data-filter="all">ALL</button>
+          <button class="chip" data-filter="running">RUNNING</button>
+          <button class="chip" data-filter="sleeping">SLEEPING</button>
+          <button class="chip" data-filter="zombie">ZOMBIE</button>
+          <button class="chip" data-filter="orphan">ORPHAN</button>
+          <button class="chip" data-filter="daemon">DAEMON</button>
+          <button class="chip" data-filter="kernel">KERNEL</button>
+          <button class="chip" data-filter="user">USER</button>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <input class="search-box" id="search-box" placeholder="Search PID / Name..." type="text"/>
+        <select class="sort-sel" id="sort-sel">
+          <option value="cpu">Sort: CPU%</option>
+          <option value="mem">Sort: MEM%</option>
+          <option value="pid">Sort: PID</option>
+          <option value="name">Sort: Name</option>
+        </select>
+        <button class="btn-kill" id="btn-kill" disabled>Kill Selected</button>
+        <button class="btn-refresh" id="btn-refresh">Refresh</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="proc-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="chk-all"/></th>
+            <th>PID</th><th>PPID</th><th>NAME</th><th>STATE</th><th>TYPE</th>
+            <th>USER</th><th>CPU%</th><th>MEM%</th><th>MEM (RSS)</th>
+            <th>THREADS</th><th>PRIORITY</th><th>NICE</th><th>STARTED</th><th>CMD</th><th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="proc-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- OS CONCEPTS -->
+  <section class="concepts-row">
+    <div class="concept-card">
+      <div class="concept-icon">🧟</div>
+      <div class="concept-title">ZOMBIE PROCESS</div>
+      <div class="concept-desc">Finished but PCB not removed. Parent hasn't called <code>wait()</code>. State = <strong>Z</strong>. Occupies PID slot.</div>
+      <div class="concept-stat" id="concept-zombie-count">0 detected</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👻</div>
+      <div class="concept-title">ORPHAN PROCESS</div>
+      <div class="concept-desc">Parent died. Adopted by <code>init/PID 1</code>. Runs normally. Common in long-running servers.</div>
+      <div class="concept-stat" id="concept-orphan-count">0 detected</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👾</div>
+      <div class="concept-title">DAEMON PROCESS</div>
+      <div class="concept-desc">Background service, no TTY. PPID=1. Started at boot. Examples: <code>sshd</code>, <code>cron</code>, <code>httpd</code>.</div>
+      <div class="concept-stat" id="concept-daemon-count">0 detected</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">⚛️</div>
+      <div class="concept-title">KERNEL THREAD</div>
+      <div class="concept-desc">Kernel address space only. <code>[kthreadd]</code>, <code>[kworker]</code>, <code>[kswapd]</code>. Handles I/O, paging, scheduling.</div>
+      <div class="concept-stat" id="concept-kernel-count">0 detected</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🔒</div>
+      <div class="concept-title">PROCESS STATES</div>
+      <div class="concept-desc"><strong>R</strong> Running · <strong>S</strong> Sleeping · <strong>D</strong> Uninterruptible · <strong>Z</strong> Zombie · <strong>T</strong> Stopped · <strong>I</strong> Idle</div>
+      <div class="concept-stat">PCB maintained per process</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📡</div>
+      <div class="concept-title">YOUR DEVICE</div>
+      <div class="concept-desc">CPU cores, RAM, battery, network, screen - all fetched from your actual hardware via Browser APIs.</div>
+      <div class="concept-stat" id="concept-real-info">Fetching...</div>
+    </div>
+  </section>
+
+  <section class="bottom-row">
+    <div class="log-panel">
+      <div class="panel-header"><span class="panel-title">SYSTEM EVENT LOG</span><button class="btn-clear" id="btn-clear-log">CLEAR</button></div>
+      <div class="log-entries" id="log-entries"></div>
+    </div>
+    <div class="mem-detail-panel">
+      <div class="panel-header"><span class="panel-title">MEMORY MAP</span></div>
+      <div class="mem-map-visual" id="mem-map-visual"></div>
+      <div class="mem-legend">
+        <span class="ml-item"><span class="ml-dot" style="background:#00ffcc"></span>OS/Kernel ~512MB</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#ff6b35"></span>Apps</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#ffd93d"></span>Browser/JS</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#6bcb77"></span>Cache</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#222c3f"></span>Free</span>
+      </div>
+      <div id="mem-detail-rows" style="margin-top:8px"></div>
+    </div>
+    <div class="cpu-detail-panel">
+      <div class="panel-header"><span class="panel-title">NAVIGATOR DATA</span></div>
+      <div class="nav-dump" id="nav-dump"></div>
+    </div>
+  </section>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <footer class="footer">
+    <span>ProcWatch v3.0 - B.Tech CSE OS Project - Real device data - No server - No tracking</span>
+    <span id="footer-update">--</span>
+  </footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
